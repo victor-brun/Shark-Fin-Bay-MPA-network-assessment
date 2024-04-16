@@ -1,0 +1,6 @@
+"Model","estimate","std.error","statistic","df.error","conf.low","conf.high","p.value","p.label","group"
+"Species richness",0.687,0.401,1.715,9,-0.219,1.594,0.12,"0.69 ","pos"
+"Abundance",0.344,0.367,0.936,9,-0.487,1.175,0.374,"0.34 ","pos"
+"Mean size",0.302,0.348,0.867,9,-0.486,1.09,0.408,"0.30 ","pos"
+"Biomass",0.34,0.411,0.826,9,-0.591,1.27,0.43,"0.34 ","pos"
+"Trophic level",-0.324,0.355,-0.915,9,-1.127,0.478,0.384,"-0.32 ","neg"

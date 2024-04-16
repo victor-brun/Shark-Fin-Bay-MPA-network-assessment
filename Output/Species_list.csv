@@ -1,0 +1,92 @@
+"Species_fishbase","count","percent","a","b","Species_name","Family","Trophic_group","Target","Trophic_guild","Trophic_level"
+"Acanthurus auranticavus",3,0.04,0.02344,2.96,"Acanthurus_auranticavus","Acanthuridae","Herbivore-Detritivore",2.5,"Herbivore Microvore Detritivore",2
+"Anampses caeruleopunctatus",1,0.01,0.01,3.07,"Anampses_caeruleopunctatus","Labridae","Invertivore",1.5,"Microinvertivore",3.37
+"Anyperodon leucogrammicus",2,0.03,0.012822,3.169212,"Anyperodon_leucogrammicus","Serranidae","Piscivore",3,"Piscivore",3.94
+"Atule mate",12,0.15,0.0309266666666667,3.00866666666667,"Atule_mate","Carangidae","Piscivore",2.83,"Piscivore",3.27
+"Balistoides viridescens",87,1.11,0.04701,2.97364,"Balistoides_viridescens","Balistidae","Invertivore",1.3,"Macroinvertivore",3.33
+"Bolbometopon muricatum",61,0.78,0.01445,3.02,"Bolbometopon_muricatum","Labridae (Scarinae)","Omnivore",1.7,"Herbivore Microvore Detritivore",2.67
+"Carangoides bajad",25,0.32,0.011855,2.876,"Carangoides_bajad","Carangidae","Piscivore",2.83,"Piscivore",3.97
+"Carangoides ferdau",1,0.01,0.323511428571429,2.64722285714286,"Carangoides_ferdau","Carangidae","Piscivore",2.83,"Piscivore",3.98
+"Caranx melampygus",11,0.14,0.024523,2.949499,"Caranx_melampygus","Carangidae","Piscivore",2.83,"Piscivore",4.28
+"Cephalopholis boenak",50,0.64,0.02016,3.01087857142857,"Cephalopholis_boenak","Serranidae","Piscivore",3,"Piscivore",3.83
+"Cephalopholis cyanostigma",36,0.46,0.0266666666666667,2.90466666666667,"Cephalopholis_cyanostigma","Serranidae","Piscivore",3,"Piscivore",4.17
+"Cephalopholis microprion",99,1.26,0.0228,3.13,"Cephalopholis_microprion","Serranidae","Piscivore",3,"Crustacivore",4
+"Cetoscarus ocellatus",22,0.28,0.0276,2.92,"Cetoscarus_ocellatus","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Cheilinus chlorourus",20,0.25,0.02993,2.9085375,"Cheilinus_chlorourus","Labridae","Invertivore",1.5,"Crustacivore",3.46
+"Cheilinus fasciatus",760,9.66,0.023335,3,"Cheilinus_fasciatus","Labridae","Invertivore",1.5,"Crustacivore",3.37
+"Cheilinus trilobatus",17,0.22,0.0421825,2.8553675,"Cheilinus_trilobatus","Labridae","Invertivore",1.5,"Macroinvertivore",3.92000007629395
+"Cheilinus undulatus",7,0.09,0.0157775,3.05755,"Cheilinus_undulatus","Labridae","Invertivore",1.5,"Macroinvertivore",3.99
+"Chlorurus bleekeri",513,6.52,0.0415,2.946,"Chlorurus_bleekeri","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Chlorurus japanensis",3,0.04,0.01445,3.02,"Chlorurus_japanensis","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Chlorurus sordidus",14,0.18,0.0205916666666667,3.08705166666667,"Chlorurus_sordidus","Labridae (Scarinae)","Omnivore",1.7,"Herbivore Microvore Detritivore",2.62
+"Choerodon anchorago",181,2.3,0.0255333333333333,3.00366666666667,"Choerodon_anchorago","Labridae","Invertivore",1.5,"Macroinvertivore",3.32
+"Choerodon oligacanthus",47,0.6,0.01288,3.05,"Choerodon_oligacanthus","Labridae","Invertivore",1.5,"Macroinvertivore",3.4
+"Choerodon schoenleinii",3,0.04,0.0167825,3.052725,"Choerodon_schoenleinii","Labridae","Invertivore",1.5,"Macroinvertivore",3.38
+"Cromileptes altivelis",1,0.01,0.0412633333333333,3.01642666666667,"Cromileptes_altivelis","Serranidae","Piscivore",3,"Crustacivore",4.5
+"Diagramma melanacrum",49,0.62,0.0182,3.06,"Diagramma_melanacra","Haemulidae","Invertivore",2.5,NA,3.6
+"Diagramma pictum",7,0.09,0.010102,3.073512,"Diagramma_pictum","Haemulidae","Invertivore",2.5,"Macroinvertivore",3.39
+"Epinephelus coioides",1,0.01,0.016562,3.045259,"Epinephelus_coioides","Serranidae","Piscivore",3,"Piscivore",3.95
+"Epinephelus merra",1,0.01,0.012394,3.127872,"Epinephelus_merra","Serranidae","Piscivore",3,"Crustacivore",4.38
+"Epinephelus ongus",1,0.01,0.0173725,3.01095,"Epinephelus_ongus","Serranidae","Piscivore",3,"Crustacivore",4
+"Gnathanodon speciosus",4,0.05,0.064371,2.796156,"Gnathanodon_speciosus","Carangidae","Piscivore",2.83,"Piscivore",3.84
+"Hemigymnus fasciatus",13,0.17,0.023005,3,"Hemigymnus_fasciatus","Labridae","Invertivore",1.5,"Planktivore",3.5
+"Hemigymnus melapterus",56,0.71,0.0236566666666667,2.97420666666667,"Hemigymnus_melapterus","Labridae","Invertivore",1.5,"Microinvertivore",3.55
+"Hipposcarus longiceps",7,0.09,0.0161,3.05,"Hipposcarus_longiceps","Labridae (Scarinae)","Omnivore",1.7,"Herbivore Microvore Detritivore",2.73
+"Lethrinus erythropterus",341,4.34,0.02005,3.2085,"Lethrinus_erythropterus","Lethrinidae","Invertivore",2.7,"Piscivore",3.70000004768372
+"Lethrinus harak",11,0.14,0.0195183333333333,3.01004333333333,"Lethrinus_harak","Lethrinidae","Invertivore",2.7,"Crustacivore",3.43
+"Lethrinus microdon",4,0.05,0.017682,2.96688,"Lethrinus_microdon","Lethrinidae","Piscivore",2.7,"Piscivore",3.79
+"Lethrinus nebulosus",1,0.01,0.0380707692307692,2.83629692307692,"Lethrinus_nebulosus","Lethrinidae","Piscivore",2.7,"Piscivore",3.64000010490417
+"Lethrinus obsoletus",3,0.04,0.0178433333333333,3.02161,"Lethrinus_obsoletus","Lethrinidae","Invertivore",2.7,"Microinvertivore",3.11999988555908
+"Lethrinus ornatus",1,0.01,0.0293,3.067,"Lethrinus_ornatus","Lethrinidae","Invertivore",2.7,"Microinvertivore",3.36999988555908
+"Lutjanus argentimaculatus",44,0.56,0.02515,2.941186,"Lutjanus_argentimaculatus","Lutjanidae","Piscivore",2.7,"Piscivore",3.85
+"Lutjanus biguttatus",279,3.55,0.01445,2.98,"Lutjanus_biguttatus","Lutjanidae","Invertivore",1.3,"Crustacivore",3.98000001907349
+"Lutjanus carponotatus",666,8.47,0.0242075,2.872675,"Lutjanus_carponotatus","Lutjanidae","Piscivore",2.83,"Crustacivore",4.02
+"Lutjanus decussatus",13,0.17,0.02805,2.9635,"Lutjanus_decussatus","Lutjanidae","Piscivore",2.375,"Crustacivore",4.02
+"Lutjanus fulviflamma",120,1.53,0.034754,2.891215,"Lutjanus_fulviflamma","Lutjanidae","Invertivore",2.375,"Crustacivore",3.85
+"Lutjanus monostigma",9,0.11,0.02029,2.94126,"Lutjanus_monostigma","Lutjanidae","Piscivore",2.375,"Crustacivore",4.27
+"Lutjanus quinquelineatus",105,1.33,0.017075,3.028645,"Lutjanus_quinquelineatus","Lutjanidae","Invertivore",2.375,"Crustacivore",4.02
+"Lutjanus russellii",70,0.89,0.154111666666667,2.888915,"Lutjanus_russellii","Lutjanidae","Piscivore",2.375,"Crustacivore",3.79999995231628
+"Lutjanus vitta",16,0.2,0.015285,3.07314625,"Lutjanus_vitta","Lutjanidae","Invertivore",2.375,"Crustacivore",3.74000000953674
+"Mulloidichthys flavolineatus",1,0.01,0.0293811111111111,2.90826555555556,"Mulloidichthys_flavolineatus","Mullidae","Invertivore",1.7,"Macroinvertivore",3.47000002861023
+"Oxycheilinus digramma",24,0.31,0.0245075,2.96175,"Oxycheilinus_digramma","Labridae","Piscivore",1.5,"Crustacivore",3.7
+"Parupeneus barberinus",41,0.52,0.0179342857142857,2.98692714285714,"Parupeneus_barberinus","Mullidae","Invertivore",1.7,"Crustacivore",3.44
+"Parupeneus indicus",5,0.06,0.0163557142857143,3.06560142857143,"Parupeneus_indicus","Mullidae","Invertivore",1.7,"Crustacivore",3.5
+"Pentapodus bifasciatus",201,2.56,0.01549,2.97,"Pentapodus_bifasciatus","Nemipteridae","Invertivore",2.5,"Microinvertivore",3.56
+"Pentapodus trivittatus",8,0.1,0.01995,3.01,"Pentapodus_trivittatus","Nemipteridae","Invertivore",2.5,"Microinvertivore",3.61
+"Plectorhinchus chaetodonoides",32,0.41,0.02721,3.01611,"Plectorhinchus_chaetodonoides","Haemulidae","Piscivore",2.5,"Macroinvertivore",3.83
+"Plectorhinchus chrysotaenia",1,0.01,0.0138,3,"Plectorhinchus_chrysotaenia","Haemulidae","Piscivore",2.5,"Microinvertivore",3.5
+"Plectorhinchus lineatus",4,0.05,0.013125,3.066295,"Plectorhinchus_lineatus","Haemulidae","Piscivore",2.5,"Macroinvertivore",3.88
+"Plectropomus areolatus",1,0.01,0.01148,3.05,"Plectropomus_areolatus","Serranidae","Piscivore",3,"Piscivore",4.5
+"Plectropomus leopardus",36,0.46,0.0136,3.08234888888889,"Plectropomus_leopardus","Serranidae","Piscivore",3,"Piscivore",4.4
+"Plectropomus maculatus",30,0.38,0.009482,3.13308,"Plectropomus_maculatus","Serranidae","Piscivore",3,"Piscivore",4.1100001335144
+"Pseudobalistes flavimarginatus",2,0.03,0.0257,2.94,"Pseudobalistes_flavimarginatus","Balistidae","Invertivore",1.3,"Macroinvertivore",2.78
+"Scarus altipinnis",3,0.04,0.020275,3.00883,"Scarus_altipinnis","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus chameleon",21,0.27,0.01479,3.03,"Scarus_chameleon","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus dimidiatus",4,0.05,0.0278,3.049,"Scarus_dimidiatus","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus festivus",1,0.01,0.0104,3.24,"Scarus_festivus","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus frenatus",3,0.04,0.032,3.06,"Scarus_frenatus","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus ghobban",336,4.27,0.0236,2.96536,"Scarus_ghobban","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus hypselopterus",718,9.13,0.01148,3.09,"Scarus_hypselopterus","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus niger",35,0.44,0.02289,3.095592,"Scarus_niger","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus quoyi",55,0.7,0.0565,2.818,"Scarus_quoyi","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2
+"Scarus rivulatus",587,7.46,0.0204625,3.1057625,"Scarus_rivulatus","Labridae (Scarinae)","Herbivore-Detritivore",1.7,"Herbivore Microvore Detritivore",2.71
+"Scarus sp.",4,0.05,0.0204625,3.105762,"Scarus_sp","Labridae","Herbivore-Detritivore",1.7,NA,2
+"Scolopsis bilineata",3,0.04,0.0158433333333333,3.18226,"Scolopsis_bilineata","Nemipteridae","Invertivore",2.5,"Microinvertivore",3.62
+"Scolopsis ciliata",430,5.47,0.0319666666666667,2.971,"Scolopsis_ciliata","Nemipteridae","Invertivore",2.5,"Microinvertivore",3.66
+"Scolopsis margaritifera",626,7.96,0.0333,2.966,"Scolopsis_margaritifera","Nemipteridae","Invertivore",2.5,"Microinvertivore",3.6
+"Scolopsis monogramma",13,0.17,0.025,3.104,"Scolopsis_monogramma","Nemipteridae","Invertivore",2.5,"Microinvertivore",3.86
+"Siganus canaliculatus",6,0.08,0.0322777777777778,2.90444444444444,"Siganus_canaliculatus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2.75999999046326
+"Siganus corallinus",1,0.01,0.003525,3.380395,"Siganus_corallinus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2.46
+"Siganus fuscescens",61,0.78,0.0233825,2.899215,"Siganus_fuscescens","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2.27999997138977
+"Siganus guttatus",93,1.18,0.0376666666666667,2.87466666666667,"Siganus_guttatus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2.68
+"Siganus javus",6,0.08,0.01738,3.05,"Siganus_javus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2.39
+"Siganus puellus",5,0.06,0.0177133333333333,3.00946333333333,"Siganus_puellus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",3
+"Siganus punctatissimus",45,0.57,0.01622,3.06,"Siganus_punctatissimus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2
+"Siganus punctatus",12,0.15,0.020528,3.110632,"Siganus_punctatus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2
+"Siganus stellatus",7,0.09,0.0441,2.597,"Siganus_stellatus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2.7
+"Siganus virgatus",464,5.9,0.0204,3.236,"Siganus_virgatus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2.73
+"Siganus vulpinus",43,0.55,0.022445,3,"Siganus_vulpinus","Siganidae","Herbivore-Detritivore",2.7,"Herbivore Microvore Detritivore",2.68
+"Sphyraena barracuda",2,0.03,0.017335,2.947053125,"Sphyraena_barracuda","Sphyraenidae","Piscivore",2.7,"Piscivore",4.5
+"Symphorus nematophorus",1,0.01,0.036515,2.873145,"Symphorus_nematophorus","Lutjanidae","Piscivore",2.375,"Piscivore",4.18
+"Thalassoma lunare",95,1.21,0.02465,2.824435,"Thalassoma_lunare","Labridae","Invertivore",1.5,"Planktivore",3.5
+"Upeneus tragula",2,0.03,0.0202166666666667,2.95066666666667,"Upeneus_tragula","Mullidae","Invertivore",1.7,"Crustacivore",3.5

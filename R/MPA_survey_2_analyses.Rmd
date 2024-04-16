@@ -1,0 +1,771 @@
+---
+title: "MPA_survey_2_analyses"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# 1. Loading data
+
+
+```{r message=FALSE, warning=FALSE}
+
+## DATA AND PACKAGES ----
+
+rm(list=ls())
+
+library(tidyverse)
+library(vegan)
+library(reshape)
+library(nlme)
+library(ggpubr)
+library(plyr)
+library(ggcorrplot)
+library(gridExtra)
+library(nlme)
+library(sjPlot)
+library(fishualize)
+library(glue)
+library(rstatix)
+#library(rredlist)
+
+# Opening cleaned data
+df <- read.csv("./../Data/data_mpa.csv", sep=",")
+meta_df <- read.csv("./../Data/metadata_mpa.csv", sep=",")
+meta_species <- read.csv("./../Data/metadata_species.csv", sep=",")
+
+```
+
+
+# 2. Number of species, families and abundance per species
+
+```{r message=FALSE}
+# Number of species and families
+df %>% 
+  dplyr::summarise(n_distinct(Species_fishbase)) # 91 species
+df %>% 
+  dplyr::summarise(n_distinct(Family)) # 13 families
+
+# Abundance per species
+spec <-  df %>%
+  group_by(Species_fishbase) %>%
+  dplyr::summarise(count = sum(Count))
+spec$percent <- (spec$count/sum(spec$count))*100
+spec$percent <- round(spec$percent, digits=2)
+spec <-  spec %>% left_join(meta_species)
+
+# Adding IUCN category to species data
+#rl_search("Bolbometopon muricatum", key = "9c8b11d2b1743ade82749fd689ad163699cbc0e5321f32d0e6e968b9f7db3789")$result$category
+#category <- vector("character", length(spec$Species_fishbase))
+#species_list <- spec$Species_fishbase
+#for (i in 1:length(species_list)) {
+ #if (is.null(rl_search(species_list[i], key = "9c8b11d2b1743ade82749fd689ad163699cbc0e5321f32d0e6e968b9f7db3789")$result$category)) {category[i] <- "NA" } else {
+  #category[i] <- rl_search(species_list[i], key = "9c8b11d2b1743ade82749fd689ad163699cbc0e5321f32d0e6e968b9f7db3789")$result$category }
+#} 
+#spec$category <- category
+#write.csv(spec, "./../spec.csv")
+
+category <- read.csv("./../Output/spec_IUCN.csv", sep = ";")
+category <- category %>% select(Species_fishbase, category)
+spec <- spec %>% left_join(category)
+rm(category)
+
+```
+
+# 3. Computing species N, abundance, mean size, biomass and trophic level
+
+```{r message=FALSE, warning=FALSE}
+
+## Computations of averages per transect
+
+# species richness
+df_transect = df %>%
+  drop_na(Date, Species_fishbase) %>%  
+  group_by(ID, Transect) %>% 
+  dplyr::summarise(N_species = n_distinct(Species_fishbase))
+
+# adding abundance
+abundance <- df %>% 
+  group_by(ID, Transect) %>% 
+  dplyr::summarise(abundance = sum(Count))
+df_transect$Abundance = abundance$abundance
+rm(abundance)
+
+# adding biomass
+biomass <- df %>% 
+  group_by(ID, Transect) %>% 
+  dplyr::summarise(mass = (sum(mass)*10000)/300) # Cross product to go from kg/300m2 (transect=6*50m) to kg/Ha
+df_transect$Biomass = biomass$mass
+rm(biomass)
+
+# adding mean size
+mean_size <- df %>%
+  tidyr::uncount(Count) %>%
+  group_by(ID, Transect) %>%
+  dplyr::summarise(mean_size = mean(Size))
+df_transect$Mean_size <-  mean_size$mean_size
+rm(mean_size)
+
+# adding mean trophic level
+
+trophic_level <- df %>%
+  filter(!is.na (Trophic_level)) %>%
+  group_by(ID, Transect, Species_fishbase) %>%
+  dplyr::summarise(Species_weighted_mass = sum(mass*Trophic_level), mass = sum(mass))
+trophic_level <- trophic_level %>%
+  group_by(ID, Transect) %>%
+  dplyr::summarise(trophic_level = sum(Species_weighted_mass)/sum(mass))
+df_transect$Trophic_level <- trophic_level$trophic_level
+
+## Computation of averages per site
+
+# species richness
+df_site <- df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(N_species = mean(N_species))
+se = df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(se = sd(N_species)/2) # Calculating standard error, n = 4 transects
+df_site$se_N_species = se$se
+sd = df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(sd = sd(N_species)) # Calculating variation coefficient
+df_site$sd_N_species = sd$sd
+
+# abundance
+abundance <- df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(abundance = mean(Abundance))
+df_site$Abundance = abundance$abundance
+rm(abundance)
+se = df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(se = sd(Abundance)/2) # Calculating standard error, n = 4 transects
+df_site$se_abundance = se$se
+sd = df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(sd = sd(Abundance)) # Calculating variation coefficient
+df_site$sd_abundance = sd$sd
+
+# biomass
+biomass <- df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(biomass = mean(Biomass))
+df_site$Biomass <-  biomass$biomass
+rm(biomass)
+se <-  df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(se = sd(Biomass)/2) # Calculating standard error, n = 4 transects
+df_site$se_biomass = se$se
+sd <-  df_transect %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(sd = sd(Biomass)) # Calculating variation coefficient
+df_site$sd_biomass <-  sd$sd
+
+# mean size
+mean_size <- df_transect %>%
+  group_by(ID) %>%
+  dplyr::summarise(mean_size = mean(Mean_size))
+df_site$Mean_size <- mean_size$mean_size
+rm(mean_size)
+se <- df_transect %>%
+  group_by(ID) %>%
+  dplyr::summarise(se=sd(Mean_size)/2)
+df_site$se_mean_size <- se$se
+sd <- df_transect %>%
+  group_by(ID) %>%
+  dplyr::summarise(sd = sd(Mean_size))
+df_site$sd_mean_size <- sd$sd
+
+# mean trophic level
+trophic_level <- df_transect %>%
+  group_by(ID) %>%
+  dplyr::summarise(trophic_level = mean(Trophic_level))
+df_site$Trophic_level <- trophic_level$trophic_level
+rm(trophic_level)
+se <- df_transect %>%
+  group_by(ID) %>%
+  dplyr::summarise(se=sd(Trophic_level)/2)
+df_site$se_trophic_level <- se$se
+sd <- df_transect %>%
+  group_by(ID) %>%
+  dplyr::summarise(sd = sd(Trophic_level))
+df_site$sd_trophic_level <- sd$sd
+
+rm(se,sd)
+
+# Adding metadata
+
+df_site = df_site %>%
+  left_join(meta_df)
+
+df_transect = df_transect %>%
+  left_join(meta_df)
+
+# Rename protected/unprotected into protected/control
+df_transect$Type <- df_transect$Type %>% fct_recode("Control" = "Unprotected")
+df_transect$Type <- factor(df_transect$Type, levels = c("Control", "Protected"))
+df_site$Type <- df_site$Type %>% fct_recode("Control" = "Unprotected")
+df_site$Type <- factor(df_site$Type, levels = c("Control", "Protected"))
+
+```
+
+
+
+## 4. Data visualization
+
+```{r message=FALSE, warning=FALSE}
+
+# Pie chart of fish families
+
+pie <- spec %>%
+  group_by(Family) %>%
+  dplyr::summarise(count = n())
+
+ggplot(pie, aes(x = "", y = count, fill = Family)) +
+  geom_col(color = "black") +
+  geom_label(aes(label = count),
+             color = "white",
+             position = position_stack(vjust = 0.5),
+             show.legend = FALSE) +
+  coord_polar(theta = "y") +
+  theme_void()
+rm(pie)
+
+# Species richness CONTROL vs. PIMPA
+tapply(df_transect$N_species, df_transect$Protection, mean)
+
+ggplot(data = df_site, aes(x = ID, y = N_species, col = Protection)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=N_species-se_N_species, ymax = N_species+se_N_species), width=.2) +
+  coord_flip() +
+  labs(x = "Site", y = "Species richnesst ±SE", 
+       title = "Species richness per transect", col = "Protection status") +
+  scale_color_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# Abundance CONTROL vs. PIMPA
+tapply(df_transect$Abundance, df_transect$Protection, mean)
+
+ggplot(data = df_site, aes(x=ID, y=Abundance, col = Protection)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=Abundance-se_abundance, ymax = Abundance+se_abundance), width=.2) +
+  coord_flip() +
+  labs(x = "Site", y = "Mean abundance per transect (number of individuals) ±SE", 
+       title = "Mean abundance of target species per transect", col = "Protection status") +
+  scale_color_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# Biomass CONTROL vs. PIMPA
+tapply(df_transect$Biomass, df_transect$Protection, mean)
+
+ggplot(data = df_site, aes(x=ID, y=Biomass, col = Protection)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=Biomass-se_biomass, ymax = Biomass+se_biomass), width=.2) +
+  coord_flip() +
+  labs(x = "Site", y = "Mean biomass per transect(kg/ha) ±SE", 
+       title = "Mean biomass of target species per transect", col = "Protection status") +
+  scale_color_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# Mean size CONTROL vs. PIMPA
+tapply(df_transect$Mean_size, df_transect$Protection, mean)
+
+ggplot(data = df_site, aes(x=ID, y=Mean_size, col = Protection)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=Mean_size-se_mean_size, ymax = Mean_size+se_mean_size), width=.2) +
+  coord_flip() +
+  labs(x = "Site", y = "Mean size per transect ±SE", 
+       title = "Mean size of target species per transect", col = "Protection status") +
+  scale_color_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# Trophic level CONTROL vs. PIMPA
+tapply(df_transect$Trophic_level, df_transect$Protection, mean)
+
+ggplot(data = df_site, aes(x=ID, y=Trophic_level, col = Protection)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=Trophic_level-se_trophic_level, ymax = Trophic_level+se_trophic_level), width=.2) +
+  coord_flip() +
+  labs(x = "Site", y = "Mean trophic level ±SE", 
+       title = "Mean trophic level of assemblage per transect", col = "Protection status") +
+  scale_color_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+```
+
+# 5. Boxplots and LMEs CONTROL vs. PIMPA
+
+```{r}
+
+## STATISTICS PROTECTED VS. NON-PROTECTED ----
+
+# 1. Mean species richness
+plot_richness <-  ggplot(data = df_transect, aes(x = Protection, y = N_species, fill = Protection)) +
+  geom_boxplot(alpha = .6) +
+  geom_jitter(alpha = .2, width = .2) +
+  labs(x = "", y = "Species richness", fill = "Protection status") +
+  scale_fill_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# 2. Abundance
+plot_abundance <-  ggplot(data = df_transect, aes(x = Protection, y = Abundance, fill = Protection)) +
+  geom_boxplot(alpha = .6) +
+  geom_jitter(alpha = .2, width = .2) +
+  labs(x = "", y = "Abundance (/300m2)", fill = "Protection status") +
+  scale_fill_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# 3. Mean sizes
+plot_size <- ggplot(data = df_transect, aes(x = Protection, y = Mean_size, fill = Protection)) +
+  geom_boxplot(alpha = .6) +
+  geom_jitter(alpha = .2, width = .2) +
+  labs(x = "", y = "Mean size (TL, cm)", fill = "Protection status") +
+  scale_fill_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# 4. Mean biomass
+plot_biomass <- ggplot(data = df_transect, aes(x = Protection, y = Biomass, fill = Protection)) +
+  geom_boxplot(alpha = .6) +
+  geom_jitter(alpha = .2, width = .2) +
+  labs(x = "", y = "Biomass (kg/ha)", fill = "Protection status") +
+  scale_fill_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# 5. Mean trophic level
+plot_trophic <- ggplot(data = df_transect, aes(x = Protection, y = Trophic_level, fill = Protection)) +
+  geom_boxplot(alpha = .6) +
+  geom_jitter(alpha = .2, width = .2) +
+  labs(x = "", y = "Mean trophic level", fill = "Protection status") +
+  scale_fill_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+
+# 6. LMEs
+# Computing LMEs
+lme_n_species <- lme(scale(N_species) ~ Protection, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_transect, na.action = na.omit)
+lme_abundance <- lme(scale(Abundance) ~ Protection, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_transect, na.action = na.omit)
+lme_mean_size <- lme(scale(Mean_size) ~ Protection, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_transect, na.action = na.omit)
+lme_biomass <- lme(scale(Biomass) ~ Protection, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_transect, na.action = na.omit)
+lme_trophic_level <- lme(scale(Trophic_level) ~ Protection, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_transect, na.action = na.omit)
+
+# Get LME data
+lme_data <- rbind(get_model_data(lme_n_species, type = c("est")), get_model_data(lme_abundance, type = c("est")),
+                  get_model_data(lme_mean_size, type = c("est")), get_model_data(lme_biomass, type = c("est")),
+                  get_model_data(lme_trophic_level, type = c("est")))
+lme_data$Model <- c("Species richness", "Abundance", "Mean size", "Biomass", "Trophic level")
+lme_data$Model <- factor(lme_data$Model, levels = c("Species richness", "Abundance", "Mean size", "Biomass", "Trophic level"))
+lme_data <- lme_data %>% 
+  select(Model, estimate, std.error, statistic, df.error, conf.low, conf.high, p.value, p.label, group) %>% 
+  mutate_if(is.numeric, round, 3)
+
+# Export LME data
+write.csv(lme_data, "./../Output/lme_data.csv", row.names = F)
+
+# Significant P
+lme_data <- lme_data %>% 
+  mutate(Significance = ifelse(p.value< 0.05, "Yes", "No"))
+
+# Plot LMEs
+plot_lme <- lme_data %>% 
+  ggplot(aes(x = Model, y = estimate, shape = Significance)) +
+  geom_point(size = 3, show.legend = FALSE, color = "#AB8284") +
+  geom_linerange(aes(ymin = conf.low, ymax = conf.high), show.legend = FALSE, color = "#AB8284") +
+  geom_text(label = lme_data$p.label, color = "#AB8284", nudge_x = .4, size = 4) + 
+  geom_hline(yintercept = 0, linetype = "dashed", alpha=.5) +
+  scale_x_discrete(limits=rev) +
+  coord_flip() + 
+  theme_minimal() +
+  labs(x = "", y = "Estimate") +
+  scale_color_fish_d(option = "Etheostoma_spectabile") +
+  scale_shape_manual(values = c(1, 16)) +
+  theme(axis.line.x = element_line(linewidth = .25), 
+        axis.line.y = element_line(linewidth = .25),
+        panel.spacing = unit(1, "lines"))
+
+# Plot boxplot + LMEs
+boxplots <- ggarrange(plot_richness, plot_abundance, plot_size, plot_biomass, plot_trophic, plot_lme,
+          labels = c("A", "B", "C", "D", "E", "F"), common.legend = TRUE,
+          ncol = 3, nrow=2) + bgcolor("white")
+ggsave("./../Output/boxplots.png", height = 5.5, width = 8, dpi = 300)
+ggsave("./../Output/boxplots.tiff", height = 5.5, width = 8, dpi = 300)
+boxplots
+```
+
+# 6. Baseline protected/control sites for new MPAs
+
+```{r}
+### Computing indicators in protected/control sites for each MPA
+
+# With all MPAs
+baseline_sites <- df_site %>%
+  group_by(Location, Type) %>%
+  dplyr::summarise(Richness_SD = round(sd(N_species),1), Abundance_SD = round(sd(Abundance),1), 
+                   Mean_size_SD = round(sd(Mean_size),1), Biomass_SD = round(sd(Biomass),1), 
+                   Trophic_level_SD = round(sd(Trophic_level),1), 
+                   Richness = round(mean(N_species),1), Abundance = round(mean(Abundance),1), 
+                   Biomass = round(mean(Biomass),1), Mean_size = round(mean(Mean_size),1), 
+                   Trophic_level = round(mean(Trophic_level),1), .groups = "drop") %>% 
+  mutate(Richness = paste(Richness, "±", Richness_SD),
+         Abundance = paste(Abundance, "±", Abundance_SD),
+         Mean_size = paste(Mean_size, "±", Mean_size_SD),
+         Biomass = paste(Biomass, "±", Biomass_SD),
+         Trophic_level = paste(Trophic_level, "±", Trophic_level_SD)) %>% 
+  select(-Richness_SD, -Abundance_SD, -Mean_size_SD, -Biomass_SD, -Trophic_level_SD)
+
+# PIMPA vs all other sites
+baseline_PIMPA <- df_site %>%
+  group_by(Protection) %>%
+  dplyr::summarise(Richness_SD = round(sd(N_species),1), Abundance_SD = round(sd(Abundance),1), 
+                   Mean_size_SD = round(sd(Mean_size),1), Biomass_SD = round(sd(Biomass),1), 
+                   Trophic_level_SD = round(sd(Trophic_level),1), 
+                   Richness = round(mean(N_species),1), Abundance = round(mean(Abundance),1), 
+                   Biomass = round(mean(Biomass),1), Mean_size = round(mean(Mean_size),1), 
+                   Trophic_level = round(mean(Trophic_level),1), .groups = "drop") %>% 
+  mutate(Richness = paste(Richness, "±", Richness_SD),
+         Abundance = paste(Abundance, "±", Abundance_SD),
+         Mean_size = paste(Mean_size, "±", Mean_size_SD),
+         Biomass = paste(Biomass, "±", Biomass_SD),
+         Trophic_level = paste(Trophic_level, "±", Trophic_level_SD)) %>% 
+  select(-Richness_SD, -Abundance_SD, -Mean_size_SD, -Biomass_SD, -Trophic_level_SD)
+
+write.csv(baseline_sites, "./../Output/baseline_sites.csv", row.names = FALSE)
+write.csv(baseline_PIMPA, "./../Output/baseline_PIMPA.csv", row.names = FALSE)
+
+# Main statistics
+summary(df_site$N_species) # Min = 5.25, Max = 16, Mean = 10.35
+sd(df_site$N_species) # SD = 2.15
+summary(df_site$Abundance) # Min = 12.25, Max = 70, Mean 27.30
+sd(df_site$Abundance) # SD = 11.13
+summary(df_site$Biomass) # Min = 55.65, Max = 803.26, Mean = 251.29
+sd(df_site$Biomass) # SD = 151.855
+summary(df_site$Mean_size) # Min = 16.24, Max = 27.96, Mean = 20.72
+sd(df_site$Mean_size) # SD = 2.52
+summary(df_site$Trophic_level) # Min = 2.58, Max = 3.709, Mean = 3.202
+sd(df_site$Trophic_level) # SD = 0.29
+
+# Plot number of sites within, between and above BMSY
+df_site <- df_site %>%
+  mutate(MSY = case_when(Biomass < 300 ~ "Below 300 kg/ha threshold",
+                         Biomass >= 300 & Biomass < 600 ~ "Within 300–600 kg/ha threshold",
+                         TRUE ~ "Above 600 kg/ha threshold")) 
+df_site$MSY <- factor(df_site$MSY, levels = c("Below 300 kg/ha threshold", "Within 300–600 kg/ha threshold", "Above 600 kg/ha threshold"))
+
+df_MSY <- df_site %>%
+  dplyr::group_by(Protection, MSY) %>% 
+  dplyr::summarise (n = n()) %>%
+  dplyr::mutate(percent = case_when(Protection == "Control" ~ n/64,
+                            TRUE ~ n/8))
+
+ggplot(data = df_site, aes(x = Protection, fill = MSY)) +
+  geom_bar(stat = "count", position = position_fill(reverse = TRUE)) +
+  scale_fill_brewer(palette = "Pastel1") +
+  guides(fill = guide_legend(reverse=TRUE)) +
+  labs(x = "", y = "Proportion of sites", fill = "Average fish biomass level") +
+  scale_fill_fish(option = "Trimma_lantana", discrete = TRUE, direction = -1) +
+  theme_minimal()
+ggsave("./../Output/MSY.png", height = 3, width = 5, dpi = 300, bg = "white")
+ggsave("./../Output/MSY.tiff", height = 3, width = 5, dpi = 300, bg = "white")
+
+# Total number of fish observed
+sum(df$Count) #7861
+
+# ANOVA on the abundance of IUCN endangered or vulnerable species in PIMPA vs. control
+# Protection is nested in location
+df %>% 
+  left_join(select(spec, Species_fishbase, category), by = "Species_fishbase") %>%
+  filter(category %in% c("VU", "EN")) %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(Abundance_IUCN = sum(Count), .groups = "drop") %>% 
+  right_join(meta_df, by = "ID") %>% 
+  mutate(Abundance_IUCN = ifelse(is.na(Abundance_IUCN), 0, Abundance_IUCN)) %>% 
+  anova_test(Abundance_IUCN ~ Protection) # p = 0.003
+
+# Mean abundance IUCN per protection status
+df_site <- df %>% 
+  left_join(select(spec, Species_fishbase, category), by = "Species_fishbase") %>%
+  filter(category %in% c("VU", "EN")) %>% 
+  group_by(ID) %>% 
+  dplyr::summarise(Abundance_IUCN = sum(Count), .groups = "drop") %>% 
+  right_join(df_site)
+df_site$Abundance_IUCN[is.na(df_site$Abundance_IUCN)] <- 0
+# Statistics
+summary(df_site$Abundance_IUCN[df_site$Protection=="PIMPA"]) # Mean 2.88
+sd(df_site$Abundance_IUCN[df_site$Protection=="PIMPA"]) # SD = 5
+summary(df_site$Abundance_IUCN[df_site$Protection=="Control"]) # Mean 0.72
+sd(df_site$Abundance_IUCN[df_site$Protection=="Control"]) # SD 1.04
+
+### Computing one LME per location to compare newly protected and control sites
+
+## DEPLA
+df_location <- df_transect %>% filter(Location == "Depla")
+# Computing LMEs
+lme_n_species <- lme(scale(N_species) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_abundance <- lme(scale(Abundance) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_mean_size <- lme(scale(Mean_size) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_biomass <- lme(scale(Biomass) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_trophic_level <- lme(scale(Trophic_level) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+
+# Get LME data
+lme_data <- rbind(get_model_data(lme_n_species, type = c("est")), get_model_data(lme_abundance, type = c("est")),
+                  get_model_data(lme_mean_size, type = c("est")), get_model_data(lme_biomass, type = c("est")),
+                  get_model_data(lme_trophic_level, type = c("est")))
+lme_data$Model <- c("Species richness", "Abundance", "Mean size", "Biomass", "Trophic level")
+lme_data$Model <- factor(lme_data$Model, levels = c("Species richness", "Abundance", "Mean size", "Biomass", "Trophic level"))
+lme_data <- lme_data %>% 
+  select(Model, estimate, std.error, statistic, df.error, conf.low, conf.high, p.value, p.label, group) %>% 
+  mutate_if(is.numeric, round, 3)
+
+# Export LME data
+write.csv(lme_data, "./../Output/lme_depla.csv", row.names = F)
+
+# Significant P
+lme_data <- lme_data %>% 
+  mutate(Significance = ifelse(p.value< 0.05, "Yes", "No"))
+
+# Plot LMEs ecological spillover
+plot_lme_depla <- lme_data %>% 
+  ggplot(aes(x = Model, y = estimate, col = group, shape = Significance)) +
+  geom_point(size = 3, show.legend = FALSE) +
+  geom_linerange(aes(ymin = conf.low, ymax = conf.high), show.legend = FALSE) +
+  geom_text(label = lme_data$p.label, nudge_x = .4, size = 4, show.legend = FALSE) + 
+  geom_hline(yintercept = 0, linetype = "dashed", alpha=.5) +
+  scale_x_discrete(limits=rev) +
+  coord_flip() + 
+  theme_minimal() +
+  labs(x = "", y = "Estimate", title = "Depla") +
+  scale_color_fish_d(option = "Etheostoma_spectabile") +
+  scale_shape_manual(values = c(1, 16)) +
+  theme(axis.line.x = element_line(linewidth = .25), 
+        axis.line.y = element_line(linewidth = .25),
+        panel.spacing = unit(1, "lines"))
+
+# Check normality distribution of residuals with qqplot
+qqplot_n_species <- ggqqplot(resid(lme_n_species), title = "Species richness")
+qqplot_abundance <- ggqqplot(resid(lme_abundance), title = "Abundance")
+qqplot_mean_size <- ggqqplot(resid(lme_mean_size), title = "Mean size")
+qqplot_biomass <- ggqqplot(resid(lme_biomass), title = "Biomass")
+qqplot_trophic_level <- ggqqplot(resid(lme_trophic_level), title = "Trophic level")
+plot <- ggarrange(qqplot_n_species, qqplot_abundance, qqplot_mean_size, qqplot_biomass, qqplot_trophic_level)
+annotate_figure(plot, top = text_grob("Depla", color = "red", face = "bold", size = 14))
+ggsave("./../Output/qqplots_depla.png", bg = "white", height = 5, width = 8)
+
+### SANDOVAL
+df_location <- df_transect %>% filter(Location == "Sandoval")
+# Computing LMEs
+lme_n_species <- lme(scale(N_species) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_abundance <- lme(scale(Abundance) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_mean_size <- lme(scale(Mean_size) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_biomass <- lme(scale(Biomass) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_trophic_level <- lme(scale(Trophic_level) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+
+# Get LME data
+lme_data <- rbind(get_model_data(lme_n_species, type = c("est")), get_model_data(lme_abundance, type = c("est")),
+                  get_model_data(lme_mean_size, type = c("est")), get_model_data(lme_biomass, type = c("est")),
+                  get_model_data(lme_trophic_level, type = c("est")))
+lme_data$Model <- c("Species richness", "Abundance", "Mean size", "Biomass", "Trophic level")
+lme_data$Model <- factor(lme_data$Model, levels = c("Species richness", "Abundance", "Mean size", "Biomass", "Trophic level"))
+lme_data <- lme_data %>% 
+  select(Model, estimate, std.error, statistic, df.error, conf.low, conf.high, p.value, p.label, group) %>% 
+  mutate_if(is.numeric, round, 3)
+
+# Export LME data
+write.csv(lme_data, "./../Output/lme_sandoval.csv", row.names = F)
+
+# Significant P
+lme_data <- lme_data %>% 
+  mutate(Significance = ifelse(p.value< 0.05, "Yes", "No"))
+
+# Plot LMEs ecological spillover
+plot_lme_sandoval <- lme_data %>% 
+  ggplot(aes(x = Model, y = estimate, col = group, shape = Significance)) +
+  geom_point(size = 3, show.legend = FALSE) +
+  geom_linerange(aes(ymin = conf.low, ymax = conf.high), show.legend = FALSE) +
+  geom_text(label = lme_data$p.label, nudge_x = .4, size = 4, show.legend = FALSE) + 
+  geom_hline(yintercept = 0, linetype = "dashed", alpha=.5) +
+  scale_x_discrete(limits=rev) +
+  coord_flip() + 
+  theme_minimal() +
+  labs(x = "", y = "Estimate", title = "Sandoval") +
+  scale_color_fish_d(option = "Etheostoma_spectabile") +
+  scale_shape_manual(values = c(1, 16)) +
+  theme(axis.line.x = element_line(linewidth = .25), 
+        axis.line.y = element_line(linewidth = .25),
+        panel.spacing = unit(1, "lines"))
+
+# Check normality distribution of residuals with qqplot
+qqplot_n_species <- ggqqplot(resid(lme_n_species), title = "Species richness")
+qqplot_abundance <- ggqqplot(resid(lme_abundance), title = "Abundance")
+qqplot_mean_size <- ggqqplot(resid(lme_mean_size), title = "Mean size")
+qqplot_biomass <- ggqqplot(resid(lme_biomass), title = "Biomass")
+qqplot_trophic_level <- ggqqplot(resid(lme_trophic_level), title = "Trophic level")
+plot <- ggarrange(qqplot_n_species, qqplot_abundance, qqplot_mean_size, qqplot_biomass, qqplot_trophic_level)
+annotate_figure(plot, top = text_grob("Sandoval", color = "red", face = "bold", size = 14))
+ggsave("./../Output/qqplots_sandoval.png", bg = "white", height = 5, width = 8)
+
+### SILANGA
+df_location <- df_transect %>% filter(Location == "Silanga")
+# Computing LMEs
+lme_n_species <- lme(scale(N_species) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_abundance <- lme(scale(Abundance) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_mean_size <- lme(scale(Mean_size) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_biomass <- lme(scale(Biomass) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+lme_trophic_level <- lme(scale(Trophic_level) ~ Type, random = list(~1|Survey_no, ~1|Site, ~1|Depth, ~1|Tide, ~1|Visibility, ~1|Weather), data = df_location, na.action = na.omit)
+
+# Get LME data
+lme_data <- rbind(get_model_data(lme_n_species, type = c("est")), get_model_data(lme_abundance, type = c("est")),
+                  get_model_data(lme_mean_size, type = c("est")), get_model_data(lme_biomass, type = c("est")),
+                  get_model_data(lme_trophic_level, type = c("est")))
+lme_data$Model <- c("Species richness", "Abundance", "Mean size", "Biomass", "Trophic level")
+lme_data$Model <- factor(lme_data$Model, levels = c("Species richness", "Abundance", "Mean size", "Biomass", "Trophic level"))
+lme_data <- lme_data %>% 
+  select(Model, estimate, std.error, statistic, df.error, conf.low, conf.high, p.value, p.label, group) %>% 
+  mutate_if(is.numeric, round, 3)
+
+# Export LME data
+write.csv(lme_data, "./../Output/lme_silanga.csv", row.names = F)
+
+# Significant P
+lme_data <- lme_data %>% 
+  mutate(Significance = ifelse(p.value< 0.05, "Yes", "No"))
+
+# Plot LMEs ecological spillover
+plot_lme_silanga <- lme_data %>% 
+  ggplot(aes(x = Model, y = estimate, col = group, shape = Significance)) +
+  geom_point(size = 3, show.legend = FALSE) +
+  geom_linerange(aes(ymin = conf.low, ymax = conf.high), show.legend = FALSE) +
+  geom_text(label = lme_data$p.label, nudge_x = .4, size = 4, show.legend = FALSE) + 
+  geom_hline(yintercept = 0, linetype = "dashed", alpha=.5) +
+  scale_x_discrete(limits=rev) +
+  coord_flip() + 
+  theme_minimal() +
+  labs(x = "", y = "Estimate", title = "Silanga") +
+  scale_color_fish_d(option = "Etheostoma_spectabile") +
+  scale_shape_manual(values = c(1, 16)) +
+  theme(axis.line.x = element_line(linewidth = .25), 
+        axis.line.y = element_line(linewidth = .25),
+        panel.spacing = unit(1, "lines"))
+plot_lme
+
+# Check normality distribution of residuals with qqplot
+qqplot_n_species <- ggqqplot(resid(lme_n_species), title = "Species richness")
+qqplot_abundance <- ggqqplot(resid(lme_abundance), title = "Abundance")
+qqplot_mean_size <- ggqqplot(resid(lme_mean_size), title = "Mean size")
+qqplot_biomass <- ggqqplot(resid(lme_biomass), title = "Biomass")
+qqplot_trophic_level <- ggqqplot(resid(lme_trophic_level), title = "Trophic level")
+plot <- ggarrange(qqplot_n_species, qqplot_abundance, qqplot_mean_size, qqplot_biomass, qqplot_trophic_level)
+annotate_figure(plot, top = text_grob("Silanga", color = "red", face = "bold", size = 14))
+ggsave("./../Output/qqplots_silanga.png", bg = "white", height = 5, width = 8)
+
+# Assemble LMEs
+ggarrange(plot_lme_depla, plot_lme_sandoval, plot_lme_silanga, nrow = 1)
+ggsave("./../Output/LMEs_new_MPAs.png", bg = "white", height = 4, width = 8)
+```
+
+# 8. Correlations between variables
+
+```{r}
+df_corr <- df_transect %>%
+  dplyr::select(c(N_species, Abundance, Biomass, Mean_size, Trophic_level, Depth, Depth_max,
+         Visibility, Location, Tide, Weather))
+
+df_corr <- df_corr[,2:12]
+
+model.matrix(~0+., data=df_corr) %>% 
+  cor(use="pairwise.complete.obs") %>% 
+  ggcorrplot(show.diag = F, type="lower", lab=TRUE, lab_size=2, outline.col = "white",
+   ggtheme = ggplot2::theme_minimal,
+   colors = c("#6D9EC1", "white", "#E46726"))
+
+```
+
+# 9. Size frequency distribution
+
+```{r message=FALSE}
+df2 <- df %>% uncount(Count) # Uncount individuals count
+mu <- ddply(df2, "Protection", summarise, grp.mean=mean(Size)) # Add mean per group
+Size_frequency <- ggplot(df2, aes(x=Size, fill = Protection)) + # Plot size abundance distribution
+  geom_histogram(aes(y=after_stat(density)), alpha=0.6, position="identity") +
+  geom_density(alpha=0.2) +
+  geom_vline(data=mu, aes(xintercept=grp.mean),
+             linetype="dashed", show.legend = FALSE) +
+  labs(x="Total length (cm)", y = "Density", fill = "Status of protection", color = "Mean size") +
+  scale_fill_fish_d(option = "Trimma_lantana") +
+  theme_minimal()
+Size_frequency
+
+rm(df2, mu)
+```
+
+# 10. Size classes
+
+```{r message=FALSE, warning=FALSE}
+# Adding size class variable
+df <- df %>%
+  mutate(Size_class = case_when(Size < Length_max/3 ~ "Small",
+                                Size >= Length_max/3 & Size < (2*Length_max)/3 ~ "Medium",
+                                Size >= (2*Length_max)/3 ~ "Large"))
+df$Size_class <- factor(df$Size_class, levels = c("Small", "Medium", "Large"))
+
+# Calculating total biomass per size class per transect
+df_sizeclass <-  df  %>%
+  group_by(ID, Transect, Size_class) %>%
+  dplyr::summarise(Abundance_sizeclass = sum(Count)) %>%
+  left_join(meta_df)
+
+# Adding standard deviation and standard error
+df_sizeclass2 <- df_sizeclass %>%
+  select(ID, Protection, Size_class, Abundance_sizeclass) %>% 
+  group_by(Protection, Size_class) %>%
+  dplyr::summarise_each(funs(mean,sd,se=sd(.)/sqrt(n()))) %>%
+  dplyr::select(Protection, Size_class, Abundance_sizeclass_mean, Abundance_sizeclass_sd, Abundance_sizeclass_se)
+  
+# Barplot
+plot_sizeclass <- df_sizeclass2 %>%
+  ggplot(., aes(x= Protection, y = Abundance_sizeclass_mean ,fill = Size_class)) +
+  geom_bar(stat="identity", position="dodge", width = 0.75, alpha=.9) +
+  geom_errorbar(aes(ymin=Abundance_sizeclass_mean-Abundance_sizeclass_se, ymax = Abundance_sizeclass_mean+Abundance_sizeclass_se), position = position_dodge(0.75), width=.2) +
+  labs(title = "", y = "Abundance", x = "", fill = "Size class") +
+  scale_fill_fish_d(option = "Coris_gaimard") +
+  theme_bw()
+plot_sizeclass
+
+```
+
+# 11. Trophic guilds
+
+```{r message=FALSE, warning=FALSE}
+
+# Calculating total biomass per trophic guild per transect
+df_trophic <-  df  %>%
+  filter(!is.na (Trophic_guild)) %>%
+  group_by(ID, Transect, Trophic_guild) %>%
+  dplyr::summarise(Biomass_trophic = sum(mass)*10000/300) %>%
+  left_join(meta_df)
+
+# Adding standard deviation and standard error
+df_trophic2 <- df_trophic %>%
+  group_by(Protection, Trophic_guild) %>%
+  dplyr::summarise_each(funs(mean,sd,se=sd(.)/sqrt(n()))) %>%
+  dplyr::select(Protection, Trophic_guild, Biomass_trophic_mean, Biomass_trophic_sd, Biomass_trophic_se)
+  
+# Change the order of trophic groups based on trophic level
+df_trophic2$Trophic_guild <- factor(df_trophic2$Trophic_guild,
+                                    levels = c("Herbivore", "Planktivore", "Crustacivore", "Microinvertivore", "Macroinvertivore", "Piscivore"))
+
+# Barplot
+plot_trophic <- df_trophic2 %>%
+  ggplot(., aes(x= Protection, y = Biomass_trophic_mean ,fill = Trophic_guild)) +
+  geom_bar(stat="identity", position="dodge", width = 0.75, alpha=.9) +
+  geom_errorbar(aes(ymin=Biomass_trophic_mean-Biomass_trophic_se, ymax = Biomass_trophic_mean+Biomass_trophic_se), position = position_dodge(0.75), width=.2) +
+  labs(title = "", y = "Biomass (kg/ha)", x = "", fill = "Trophic guild") +
+  scale_fill_fish_d(option = "Lepomis_megalotis") +
+  theme_bw()
+plot_trophic
+
+# Plot global
+ggarrange(Size_frequency, plot_sizeclass, plot_trophic, 
+          labels = c("A", "B", "C"), legend = "right")
+ggsave("./../Output/Plot_global.png", dpi=300, width = 7, height = 5, bg="white")
+ggsave("./../Output/Plot_global.tiff", dpi=300, width = 7, height = 5, bg="white")
+
+```

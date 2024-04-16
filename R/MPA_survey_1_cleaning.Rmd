@@ -1,0 +1,331 @@
+---
+title: "MPA_survey 1. Cleaning and formatting data"
+author: "Victor Brun"
+date: "7/26/2021"
+output: html_document
+---
+
+```{r}
+## Cleaning and formatting data
+
+# 1. Required packages ----
+rm(list=ls())
+
+library(tidyverse)
+library(readxl) 
+library(rfishbase)
+library(Hmisc)
+library(formattable)
+
+# 2. Load and join the data ----
+
+# 2.1 Load main data --
+
+data_mpa <- read_xlsx("./../Data/MPA_Survey.xlsx", sheet = 1)
+
+# 2.2 Load meta data --
+
+metadata_mpa <- read_xlsx("./../Data/MPA_Survey.xlsx", sheet = 3)
+
+# 2.3 Load species list --
+
+specieslist_mpa <- read_xlsx("./../Data/MPA_Survey.xlsx", sheet = 2)
+
+# 2.4 Load trophic guilds list
+
+trophic_guild <- read.csv("./../Data/trophic_guilds.csv")
+
+# 2.5 Join data and metadata --
+
+data_mpa <- left_join(data_mpa, metadata_mpa)
+
+# 2.5 Removing observations from pilot, reconducted surveys (X1) and 2022 survey
+
+metadata_mpa <- metadata_mpa %>%
+  filter(Survey_no != "X1")
+data_mpa <- data_mpa %>%
+  filter(Survey_no != "X1")
+metadata_mpa <- metadata_mpa %>%
+  filter(Survey_no != "X3")
+data_mpa <- data_mpa %>%
+  filter(Survey_no != "X3")
+data_mpa <- data_mpa %>%
+  filter(Survey_no != "3")
+metadata_mpa <- metadata_mpa %>%
+  filter(Survey_no != "3")
+
+
+# 3. Check validity of species names using fishbase ----
+
+species_check <- data_mpa %>% 
+  # Extract unique species names
+  select(Species_name) %>% 
+  distinct() %>% 
+  # Correct potential typing errors
+  mutate(Species_name_clean = str_trim(Species_name, side = "both"),
+         Species_name_clean = str_squish(Species_name_clean),
+         Species_name_clean = tolower(Species_name_clean),
+         Species_name_clean = capitalize(Species_name_clean),
+         Species_name_clean = str_replace_all(Species_name_clean, "_", " ")) %>%
+  # Get fishbase correct names
+  rowwise() %>% 
+  mutate(Species_fishbase = ifelse(is_empty(rfishbase::validate_names(Species_name_clean)) == TRUE, 
+                                   NA, 
+                                   rfishbase::validate_names(Species_name_clean))) %>% # Check the names with fishbase
+  select(-Species_name_clean)
+
+# 4. Interactive table to check not found species names ----
+
+species_check %>%
+  filter(is.na(Species_fishbase)) %>% 
+  arrange(Species_name) %>% 
+  formattable(.) %>% 
+  as.datatable(., rownames = FALSE)
+
+# 5. Adding genus-level observations to the datatable
+
+species_check[species_check$Species_name=="Caesio_sp",]$Species_fishbase = "Caesio sp."
+species_check[species_check$Species_name=="Scarus_sp",]$Species_fishbase = "Scarus sp."
+species_check[species_check$Species_name=="Myripristis_sp",]$Species_fishbase = "Myripristis sp."
+
+# 6. Join data with correct species names ----
+
+data_mpa <- left_join(data_mpa, species_check)
+
+
+## EXTRACT COEFFICIENTS
+
+# 7. Extract a and b coefficient from fishbase ----
+
+metadata_species <- species_check
+
+metadata_species <- species_check %>% 
+  select(Species_fishbase) %>% 
+  pull() %>% 
+  length_weight(., fields = c("Species", "a", "b", "Type")) %>% 
+  group_by(Species) %>% 
+  summarise(a = mean(a, na.rm = TRUE),
+            b = mean(b, na.rm = TRUE)) %>% 
+  mutate_all(., ~replace(., is.nan(.), NA)) %>% # Replace NaN by NA
+  rename(Species_fishbase = Species) %>% 
+  right_join(metadata_species)
+
+# 8. Adding manually missing a and b values using FishBase Bayesian estimates ----
+
+metadata_species[metadata_species$Species_fishbase == "Acanthurus auranticavus",]$a = 0.02344
+metadata_species[metadata_species$Species_fishbase == "Acanthurus auranticavus",]$b = 2.96
+
+metadata_species[metadata_species$Species_fishbase == "Anampses caeruleopunctatus",]$a = 0.01000
+metadata_species[metadata_species$Species_fishbase == "Anampses caeruleopunctatus",]$b = 3.07
+
+metadata_species[metadata_species$Species_fishbase == "Bolbometopon muricatum",]$a = 0.01445
+metadata_species[metadata_species$Species_fishbase == "Bolbometopon muricatum",]$b = 3.02
+
+metadata_species[metadata_species$Species_fishbase == "Caesio sp.",]$a = 0.01585 # Caesio cuning
+metadata_species[metadata_species$Species_fishbase == "Caesio sp.",]$b = 3.07
+
+metadata_species[metadata_species$Species_fishbase == "Carangoides ferdau",]$a = 0.01995
+metadata_species[metadata_species$Species_fishbase == "Carangoides ferdau",]$b = 2.95 # Using fishbase estimate because of suspected mistake from FishBase on "a" => 0.28 (gives about 8 kg for a 50cm fish which seems enormous)
+
+metadata_species[metadata_species$Species_fishbase == "Chlorurus bowersi",]$a = 0.01445
+metadata_species[metadata_species$Species_fishbase == "Chlorurus bowersi",]$b = 3.17
+
+metadata_species[metadata_species$Species_fishbase == "Chlorurus japanensis",]$a = 0.01445
+metadata_species[metadata_species$Species_fishbase == "Chlorurus japanensis",]$b = 3.02
+
+metadata_species[metadata_species$Species_fishbase == "Choerodon oligacanthus",]$a = 0.01288
+metadata_species[metadata_species$Species_fishbase == "Choerodon oligacanthus",]$b = 3.05
+
+metadata_species[metadata_species$Species_fishbase == "Diagramma melanacrum",]$a = 0.01820
+metadata_species[metadata_species$Species_fishbase == "Diagramma melanacrum",]$b = 3.06
+
+metadata_species[metadata_species$Species_fishbase == "Epibulus brevis",]$a = 0.00389
+metadata_species[metadata_species$Species_fishbase == "Epibulus brevis",]$b = 3.12
+
+metadata_species[metadata_species$Species_fishbase == "Iniistius aneitensis",]$a = 0.01047
+metadata_species[metadata_species$Species_fishbase == "Iniistius aneitensis",]$b = 3.07
+
+metadata_species[metadata_species$Species_fishbase == "Labracinus atrofasciatus",]$a = 0.01995
+metadata_species[metadata_species$Species_fishbase == "Labracinus atrofasciatus",]$b = 3.01
+
+metadata_species[metadata_species$Species_fishbase == "Labracinus cyclophthalmus",]$a = 0.01995
+metadata_species[metadata_species$Species_fishbase == "Labracinus cyclophthalmus",]$b = 3.01
+
+metadata_species[metadata_species$Species_fishbase == "Lutjanus biguttatus",]$a = 0.01445 
+metadata_species[metadata_species$Species_fishbase == "Lutjanus biguttatus",]$b = 2.98
+
+metadata_species[metadata_species$Species_fishbase == "Lutjanus russellii",]$a = 0.01318
+metadata_species[metadata_species$Species_fishbase == "Lutjanus russellii",]$b = 2.99 # Correcting suspected mistake from fishbase data
+
+metadata_species[metadata_species$Species_fishbase == "Myripristis sp.",]$a = 0.01698 # Myripristis hexagona
+metadata_species[metadata_species$Species_fishbase == "Myripristis sp.",]$b = 3.03
+
+metadata_species[metadata_species$Species_fishbase == "Pentapodus bifasciatus",]$a = 0.01549
+metadata_species[metadata_species$Species_fishbase == "Pentapodus bifasciatus",]$b = 2.97
+
+metadata_species[metadata_species$Species_fishbase == "Pentapodus trivittatus",]$a = 0.01995
+metadata_species[metadata_species$Species_fishbase == "Pentapodus trivittatus",]$b = 3.01
+
+metadata_species[metadata_species$Species_fishbase == "Platax boersii",]$a = 0.02570 
+metadata_species[metadata_species$Species_fishbase == "Platax boersii",]$b = 2.94
+
+metadata_species[metadata_species$Species_fishbase == "Platax pinnatus",]$a = 0.02570
+metadata_species[metadata_species$Species_fishbase == "Platax pinnatus",]$b = 2.94
+
+metadata_species[metadata_species$Species_fishbase == "Platax teira",]$a = 0.02630
+metadata_species[metadata_species$Species_fishbase == "Platax teira",]$b = 2.94
+
+metadata_species[metadata_species$Species_fishbase == "Plectorhinchus chrysotaenia",]$a = 0.01380
+metadata_species[metadata_species$Species_fishbase == "Plectorhinchus chrysotaenia",]$b = 3.00
+
+metadata_species[metadata_species$Species_fishbase == "Plectropomus areolatus",]$a = 0.01148
+metadata_species[metadata_species$Species_fishbase == "Plectropomus areolatus",]$b = 3.05
+
+metadata_species[metadata_species$Species_fishbase == "Pomacanthus xanthometopon",]$a = 0.03981
+metadata_species[metadata_species$Species_fishbase == "Pomacanthus xanthometopon",]$b = 2.88 
+
+metadata_species[metadata_species$Species_fishbase == "Pseudobalistes flavimarginatus",]$a = 0.02570
+metadata_species[metadata_species$Species_fishbase == "Pseudobalistes flavimarginatus",]$b = 2.94 
+
+metadata_species[metadata_species$Species_fishbase == "Pterocaesio marri",]$a = 0.03981
+metadata_species[metadata_species$Species_fishbase == "Pterocaesio marri",]$b = 2.88 
+
+metadata_species[metadata_species$Species_fishbase == "Sargocentron ensifer",]$a = 0.01622
+metadata_species[metadata_species$Species_fishbase == "Sargocentron ensifer",]$b = 2.97
+
+metadata_species[metadata_species$Species_fishbase == "Scarus chameleon",]$a = 0.01479 
+metadata_species[metadata_species$Species_fishbase == "Scarus chameleon",]$b = 3.03
+
+metadata_species[metadata_species$Species_fishbase == "Scarus hypselopterus",]$a = 0.01148 
+metadata_species[metadata_species$Species_fishbase == "Scarus hypselopterus",]$b = 3.09
+
+metadata_species[metadata_species$Species_fishbase == "Scarus sp.",]$a = 0.02046250 #Scarus rivulatus
+metadata_species[metadata_species$Species_fishbase == "Scarus sp.",]$b = 3.105762
+
+metadata_species[metadata_species$Species_fishbase == "Siganus javus",]$a = 0.01738
+metadata_species[metadata_species$Species_fishbase == "Siganus javus",]$b = 3.05 
+
+metadata_species[metadata_species$Species_fishbase == "Siganus punctatissimus",]$a = 0.01622
+metadata_species[metadata_species$Species_fishbase == "Siganus punctatissimus",]$b = 3.06
+
+# 9. Join a and b coefficient with the main data and estimate the mass ----
+
+data_mpa <- left_join(data_mpa, metadata_species) %>% 
+  mutate(mass = (a*(Size^b)/1000)*Count)
+
+# 10. Adding family and trophic group (obtained from Fishbase) ----
+
+species_check <-  species_check %>%
+  left_join(specieslist_mpa)
+metadata_species <-  metadata_species %>%
+  left_join(species_check)
+# genus level observations
+metadata_species[metadata_species$Species_fishbase=="Caesio sp.",]$Family = "Caesionidae"
+metadata_species[metadata_species$Species_fishbase=="Scarus sp.",]$Family = "Labridae"
+metadata_species[metadata_species$Species_fishbase=="Myripristis sp.",]$Family = "Holocentridae"
+
+# 11. Adding trophic guild
+
+# Renaming trophic guilds
+trophic_guild$trophic_guild_predicted_text <- trophic_guild$trophic_guild_predicted_text %>%
+  fct_recode(
+    "Corallivore" = "corallivore",
+    "Crustacivore" = "crustacivore",
+    "Herbivore" = "Herbivores Microvores Detritivores",
+    "Macroinvertivore" = "macroinvertivore",
+    "Microinvertivore" = "microinvertivore",
+    "Piscivore" = "piscivore",
+    "Planktivore" = "planktivore",
+    "Sessile Invertivore" = "sessile invertivores"
+  )
+
+# Adding trophic guild to the dataset
+trophic_guild <- trophic_guild %>%
+  select(species, trophic_guild_predicted_text) %>%
+  rename(Species_name = species, Trophic_guild = trophic_guild_predicted_text)
+species_check <- species_check %>%
+  left_join(trophic_guild)
+metadata_species <- metadata_species %>% left_join(trophic_guild)
+
+# Missing trophic guild from same genus species or if missing, Fishbase
+metadata_species[metadata_species$Species_fishbase=="Alepes vari",]$Trophic_guild = "Piscivore"
+metadata_species[metadata_species$Species_fishbase=="Caesio caerulaurea",]$Trophic_guild = "Planktivore"
+metadata_species[metadata_species$Species_fishbase=="Caesio sp.",]$Trophic_guild = "Planktivore"
+metadata_species[metadata_species$Species_fishbase=="Diagramma melanacrum",]$Trophic_guild = "Macroinvertivore"
+metadata_species[metadata_species$Species_fishbase=="Myripristis sp.",]$Trophic_guild = "Crustacivore"
+metadata_species[metadata_species$Species_fishbase=="Platax boersii",]$Trophic_guild = "Planktivore"
+metadata_species[metadata_species$Species_fishbase=="Platax pinnatus",]$Trophic_guild = "Planktivore"
+metadata_species[metadata_species$Species_fishbase=="Platax teira",]$Trophic_guild = "Planktivore"
+metadata_species[metadata_species$Species_fishbase=="Pomacanthus sexstriatus",]$Trophic_guild = "Sessile Invertivore"
+metadata_species[metadata_species$Species_fishbase=="Pterocaesio marri",]$Trophic_guild = "Planktivore"
+metadata_species[metadata_species$Species_fishbase=="Scarus sp.",]$Trophic_guild = "Herbivore"
+metadata_species[metadata_species$Species_fishbase=="Sphyraena flavicauda",]$Trophic_guild = "Piscivore"
+
+# 12. Adding trophic level from fishbase "FoodTroph" data
+
+trophic_level <- species_check %>% 
+  select(Species_fishbase) %>% 
+  drop_na(Species_fishbase) %>% 
+  pull() %>% 
+  ecology(., fields = c("Species","FoodTroph")) %>% 
+  group_by(Species) %>% 
+  summarise(Trophic_level = mean(FoodTroph, na.rm = TRUE)) %>% 
+  mutate_all(., ~replace(., is.nan(.), NA)) %>% # Replace NaN by NA
+  rename(., Species_fishbase = Species)
+metadata_species <- metadata_species %>% left_join(trophic_level)
+
+#adding missing trophic levels from fishbase species' main page
+metadata_species[metadata_species$Species_name ==  "Acanthurus_auranticavus",]$Trophic_level = 2
+metadata_species[metadata_species$Species_name  ==  "Caesio_sp",]$Trophic_level = 3.4
+metadata_species[metadata_species$Species_name  ==  "Cephalopholis_microprion",]$Trophic_level = 4
+metadata_species[metadata_species$Species_name  ==  "Cetoscarus_ocellatus",]$Trophic_level = 2
+metadata_species[metadata_species$Species_name  ==  "Choerodon_oligacanthus",]$Trophic_level = 3.4
+metadata_species[metadata_species$Species_name  ==  "Diagramma_melanacra",]$Trophic_level = 3.6
+metadata_species[metadata_species$Species_name  ==  "Lutjanus_ehrenbergii",]$Trophic_level = 3.8
+metadata_species[metadata_species$Species_name  ==  "Myripristis_sp",]$Trophic_level = 3.1 # Based on Myripristis hexagona
+metadata_species[metadata_species$Species_name  ==  "Oxycheilinus_digramma",]$Trophic_level = 3.7
+metadata_species[metadata_species$Species_name  ==  "Platax_boersii",]$Trophic_level = 3.5
+metadata_species[metadata_species$Species_name  ==  "Plectropomus_leopardus",]$Trophic_level = 4.4
+metadata_species[metadata_species$Species_name  ==  "Pseudomonacanthus macrurus",]$Trophic_level = 2.9
+metadata_species[metadata_species$Species_name  ==  "Scarus_hypselopterus",]$Trophic_level = 2 # Based on other Scarus sp.
+metadata_species[metadata_species$Species_name  ==  "Scarus_sp",]$Trophic_level = 2
+
+# 13. Adding max size to metadata
+length <- species(metadata_species$Species_fishbase, fields = c("Species","Length")) %>% rename("Species_fishbase" = "Species")
+metadata_species <- metadata_species %>% left_join(length, by = "Species_fishbase") %>% rename("Length_max" = "Length")
+rm(length)
+
+# Manually adding length max values for genus level observations
+metadata_species[metadata_species$Species_name  ==  "Caesio_sp",]$Length_max = 40 #Average of C. cuning and C. teres
+metadata_species[metadata_species$Species_name  ==  "Myripristis_sp",]$Length_max = 30 # M. hexagona
+metadata_species[metadata_species$Species_name  ==  "Scarus_sp",]$Length_max =
+  mean(metadata_species[metadata_species$Family == "Labridae (Scarinae)",]$Length_max, na.rm=T)
+
+# 14. Adding information to dataset and deleting schooling and non-target species
+
+# Adding "Protection" variable => Pangatalan & protected sites (see map)
+metadata_mpa <-  metadata_mpa %>% mutate(Protection = ifelse(Location == "Pangatalan" & Type == "Protected", "PIMPA","Control"))
+data_mpa <- data_mpa %>% mutate(Protection = ifelse(Location == "Pangatalan" & Type == "Protected", "PIMPA", "Control"))
+
+# Adding species' metadata
+data_mpa <-  data_mpa %>% left_join(select(metadata_species, Species_name, Family, Trophic_group, Target, Trophic_guild, Trophic_level, Length_max), by = "Species_name")
+
+# Deleting species in large schools
+data_mpa <- data_mpa %>%
+  filter(!Species_name %in% c("Pterocaesio_marri","Caesio_sp", "Caesio_caerulaurea", "Sphyraena_flavicauda", "Caranx_sexfasciatus", "Alepes_vari"))
+metadata_species <- metadata_species %>%
+  filter(!Species_name %in% c("Pterocaesio_marri","Caesio_sp", "Caesio_caerulaurea", "Sphyraena_flavicauda", "Caranx_sexfasciatus", "Alepes_vari"))
+
+# Deleting species with target score <1
+data_mpa <- data_mpa %>% 
+  filter(Target > 1)
+metadata_species <- metadata_species %>% 
+  filter(Target > 1)
+
+# 15. Exporting cleaned datasets
+write.csv(data_mpa, "./../Data/data_mpa.csv", row.names = FALSE)
+write.csv(metadata_mpa, "./../Data/metadata_mpa.csv", row.names = FALSE)
+write.csv(metadata_species, "./../Data/metadata_species.csv", row.names = FALSE)
+
+```
+
